@@ -1,52 +1,44 @@
-import type { Metadata, Viewport } from "next";
-import "./globals.css";
-import QueryProvider from "@/lib/query-client";
-import Nav from "@/components/shared/nav";
+import type { Metadata, Viewport } from 'next';
+import { DM_Sans, Instrument_Serif } from 'next/font/google';
+import './globals.css';
+import QueryProvider from '@/lib/query-client';
+
+// Self-hosted at build time: no request to Google from guests' phones.
+const sans = DM_Sans({ subsets: ['latin'], variable: '--font-sans', display: 'swap' });
+const serif = Instrument_Serif({
+  subsets: ['latin'],
+  weight: '400',
+  style: ['normal', 'italic'],
+  variable: '--font-serif',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://pixy.ng"),
+  metadataBase: new URL('https://pixy.ng'),
   title: {
-    default: "Pixy.ng — Every photo from your event, one printed magazine",
-    template: "%s · Pixy.ng",
+    default: 'Pixy: every photo from your event, one printed magazine',
+    template: '%s · Pixy',
   },
   description:
-    "Guests scan a QR code, upload from their phones and find every photo they're in. Pixy.ng lays the best shots into a printed magazine and delivers it to the host.",
-  keywords: ["event photos", "QR upload", "face search", "photo magazine", "Nigeria", "owambe", "wedding"],
+    'Guests scan a QR code, share photos from their phones and find every photo they’re in. Pixy turns the best shots into a printed magazine for the host.',
   openGraph: {
-    title: "Pixy.ng — Every photo from your event, one printed magazine",
-    description:
-      "QR upload, selfie face search, live wall and an auto-built printed magazine. Built for Nigerian events.",
-    type: "website",
+    title: 'Pixy: every photo from your event, one printed magazine',
+    description: 'QR photo sharing, selfie search, a live wall and a printed magazine. Built for Nigerian events.',
+    type: 'website',
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#08080F",
-  width: "device-width",
+  themeColor: '#FAF7F2',
+  width: 'device-width',
   initialScale: 1,
-  maximumScale: 5,
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap"
-          rel="stylesheet"
-        />
-      </head>
+    <html lang="en" className={`${sans.variable} ${serif.variable}`}>
       <body>
-        <QueryProvider>
-          <Nav />
-          {children}
-        </QueryProvider>
+        <QueryProvider>{children}</QueryProvider>
       </body>
     </html>
   );

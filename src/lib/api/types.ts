@@ -1,3 +1,5 @@
+/** Shapes from the Pixy API (see its OpenAPI at /docs-json). */
+
 export interface User {
   id: string;
   email: string;
@@ -14,31 +16,44 @@ export interface AuthTokens {
   user: User;
 }
 
+export interface Page<T> {
+  items: T[];
+  nextCursor: string | null;
+}
+
 export type EventType = 'wedding' | 'party' | 'conference' | 'other';
 export type EventStatus = 'draft' | 'active' | 'closed' | 'archived';
 
-/**
- * The host endpoints (`/events`, `/events/:id`) return the raw event document;
- * the public room route (`/e/:slug`) returns a trimmed view with `coverUrl` and
- * a computed `uploadsOpen`. Fields unique to either shape are optional here.
- */
-export interface Event {
+/** `GET /e/:slugOrCode`: what a guest sees. Only active and closed events. */
+export interface RoomEvent {
   id: string;
   slug: string;
   name: string;
   type: EventType;
   date: string;
-  venue?: string | null;
-  joinCode?: string;
-  status?: EventStatus;
-  /** Upload window; `uploadsOpen` is derived from these when absent. */
-  startsAt?: string;
-  endsAt?: string;
-  /** Room route only. */
-  coverUrl?: string | null;
-  /** Room route only. */
-  uploadsOpen?: boolean;
-  wallEnabled?: boolean;
+  coverUrl: string | null;
+  uploadsOpen: boolean;
+  wallEnabled: boolean;
+}
+
+/** `GET /events`, `GET /events/:id`: the host's full event. */
+export interface HostEvent {
+  id: string;
+  slug: string;
+  joinCode: string;
+  name: string;
+  type: EventType;
+  status: EventStatus;
+  date: string;
+  venue: string | null;
+  packageCode: string | null;
+  startsAt: string;
+  endsAt: string;
+  uploadCap: number;
+  wallEnabled: boolean;
+  wallDelaySec: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface CreateEventInput {
@@ -72,24 +87,54 @@ export interface Guest {
   displayName: string;
   pfpUrl: string | null;
   uploadCount: number;
+  hasPhone: boolean;
 }
 
 export interface SessionResponse {
   token: string;
   guest: Guest;
-  selfieUpload?: {
-    url: string;
-    key: string;
-    headers: Record<string, string>;
-  };
+  /** Only when faceConsent was true: PUT the selfie here, then call selfie-complete. */
+  selfieUpload?: { url: string; key: string; headers: Record<string, string> };
 }
 
+export type MediaKind = 'photo' | 'video';
+
+/** A gallery or "photos of me" item. Urls are signed and expire. */
 export interface MediaItem {
   id: string;
+  type: MediaKind;
+  thumbUrl: string;
   url: string;
-  thumbUrl?: string;
-  type: 'photo' | 'video';
-  onWall?: boolean;
+  takenAt: string | null;
+  guest?: { displayName: string | null };
+}
+
+/** A guest's own upload, which may still be processing. */
+export interface MyUpload {
+  id: string;
+  type: MediaKind;
+  thumbUrl: string;
+  url: string;
+  status: 'uploading' | 'processing' | 'ready' | 'hidden' | 'rejected';
+  takenAt: string | null;
+  createdAt: string;
+}
+
+export interface MeResponse {
+  guest: Guest;
+  uploads: MyUpload[];
+  uploadsNextCursor: string | null;
+  photosOfMe: MediaItem[];
+  photosOfMeNextCursor: string | null;
+}
+
+/** Live wall item (SSE `init`/`add`). Has no `type`: videos aren't told apart yet. */
+export interface WallItem {
+  id: string;
+  thumbUrl: string;
+  url: string;
+  takenAt: string | null;
+  guest: { displayName: string | null; pfpUrl: string | null };
 }
 
 export interface LeaderboardEntry {
@@ -98,28 +143,32 @@ export interface LeaderboardEntry {
   uploadCount: number;
 }
 
+export interface PresignFile {
+  contentType: string;
+  bytes: number;
+  kind: MediaKind;
+}
+
 export interface PresignItem {
   mediaId: string;
   uploadUrl: string;
-  key: string;
   headers: Record<string, string>;
+  framedUploadUrl?: string;
+  framedHeaders?: Record<string, string>;
 }
 
-export interface PresignResponse {
-  items: PresignItem[];
-}
+export type CompleteItem =
+  | { mediaId: string; status: 'processing'; framed: boolean }
+  | { mediaId: string; error: { code: string; message: string } };
 
-export interface CompleteResponse {
-  items: Array<{
-    mediaId: string;
-    status: string;
-    duplicateOf?: string;
-  }>;
-}
-
-export interface ApiError {
-  error: {
-    code: string;
-    message: string;
-  };
+/** `GET /catalog`: active packages, cheapest first. Prices in kobo. */
+export interface CatalogPackage {
+  code: string;
+  name: string;
+  priceKobo: number;
+  /** null = unlimited */
+  imageCap: number | null;
+  magazineCount: number;
+  pages: number | null;
+  features: string[];
 }

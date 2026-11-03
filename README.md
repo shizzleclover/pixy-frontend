@@ -1,133 +1,47 @@
-# Pixy.ng Frontend
+# Pixy frontend
 
-The frontend for [Pixy.ng](https://pixy.ng) - a platform that turns everyone's photos from an event into a printed magazine delivered to the host, with no human in the loop.
+The web app for [Pixy](https://pixy.ng): guests scan a QR code, share photos from their phones and find every photo they’re in; hosts run their event; the best shots become a printed magazine.
 
-## Tech Stack
+Next.js 15 (App Router), TypeScript, Tailwind CSS 3, TanStack Query, IndexedDB (`idb`) for the offline upload queue. The API is the Pixy backend (NestJS, separate repo).
 
-- **Framework**: [Next.js 15](https://nextjs.org/) with App Router
-- **Language**: [TypeScript](https://www.typescriptlang.org/)
-- **Styling**: [Tailwind CSS](https://tailwindcss.com/)
-- **Data Fetching**: [TanStack Query](https://tanstack.com/query)
-- **Storage**: IndexedDB (via [idb](https://github.com/jakearchibald/idb)) for offline upload queue
-- **API**: REST API connecting to [Pixy Backend](../pixy-backend)
+## Getting started
 
-## Features
-
-### Guest Experience (No Login Required)
-- **Room Join** - Scan QR code or enter join code to join event room
-- **Selfie Onboarding** - Take selfie for face matching (with consent, skippable)
-- **Photo Capture** - Native camera capture with client-side compression
-- **Upload Resilience** - Offline queue with auto-retry on network reconnection
-- **Gallery** - View all event photos
-- **Photos of Me** - Automatic face-matched photos or manual selfie search
-- **Live Wall** - Real-time photo slideshow via Server-Sent Events
-- **Leaderboard** - See top uploaders
-- **In-App Browser Detection** - Prompts to open in Chrome/Safari when in Snapchat/Instagram/WhatsApp
-
-### Host Experience (Email OTP Auth)
-- **Event Management** - Create and manage events
-- **QR Code & Signage** - Generate QR codes and printable signage
-- **Media Management** - View, hide, delete photos; bulk download as ZIP
-- **Magazine Builder** - Auto-generate magazine, preview, edit, and approve
-- **Event Dashboard** - Stats on uploads, guests, storage
-
-### Admin Dashboard
-- **Overview** - Revenue, events, uploads, orders
-- **Event Management** - Moderate events across platform
-- **Media Moderation** - Hide/reject inappropriate content
-- **Orders & Print Queue** - Track orders and print jobs
-- **Coupons** - Create and manage discount codes
-- **Printers** - Manage print partner settings
-
-## Getting Started
-
-### Prerequisites
-- Node.js 22+
-- npm or pnpm
-- Backend running on `http://localhost:4000`
-
-### Installation
+Needs Node 22+ and the backend running (default `http://localhost:4000`, with `APP_URL=http://localhost:3000` so CORS allows this app).
 
 ```bash
-# Install dependencies
 npm install
-
-# Set up environment variables
-cp .env.example .env.local
+cp .env.example .env.local   # NEXT_PUBLIC_API_URL
+npm run dev                  # http://localhost:3000
 ```
 
-### Environment Variables
+| Script | |
+| --- | --- |
+| `npm run dev` | dev server |
+| `npm run build` / `npm start` | production build and server |
+| `npm run lint` | ESLint, no warnings allowed |
+| `npm run typecheck` | `tsc --noEmit` |
 
-```env
-NEXT_PUBLIC_API_URL=http://localhost:4000
-```
+## Routes
 
-### Development
+| Route | |
+| --- | --- |
+| `/` | home: how it works, packages (from `GET /catalog`), join-code box |
+| `/e/[slug]` | join an event (slug or join code; codes redirect to the slug) |
+| `/e/[slug]/gallery`, `/me`, `/mine` | everyone’s photos, photos of me, my uploads |
+| `/e/[slug]/upload` | camera |
+| `/wall/[slug]` | live wall for the venue screen (SSE) |
+| `/login` | host and admin sign-in (email code); `?next=` returns to a page |
+| `/host`, `/host/events/new`, `/host/events/[id]` | host dashboard |
+| `/admin` | admin overview |
 
-```bash
-# Run development server
-npm run dev
-```
+## How it’s put together
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+- **API calls** go through `src/lib/api/http.ts` (`request`): JSON in and out, errors become `ApiError` with the backend’s `code`, the HTTP status and the `x-request-id`. Host requests refresh the access token once on 401, then sign out; a guest 401 clears that event’s guest token. `src/lib/api/client.ts` lists the endpoints; `errors.ts` turns error codes into copy.
+- **Sessions**: host tokens in `localStorage` (`pixy_token`, `pixy_refresh`); guest tokens per event slug (`pixy_guest_<slug>`). `useAuth` guards host pages (and admin by role); `GuestPage` sends guests without a session back to the join screen.
+- **Uploads**: photos are converted to JPEG on the phone (`lib/media/compress.ts`), stored in IndexedDB, then sent one at a time: presign, PUT straight to R2, complete (`lib/media/upload.ts`). The queue (`hooks/use-upload-queue.ts`, one per room via `UploadQueueProvider`) drains on load, when the phone comes back online and every 20 s. Refusals such as “uploads closed” are dropped and shown; network and server errors are retried.
 
-### Build
+## Design
 
-```bash
-# Build for production
-npm run build
+Warm paper, ink text and one tomato accent: flat colour, no gradients, photos supply the colour. The live wall is the one dark screen. Headlines in Instrument Serif, everything else in DM Sans (self-hosted via `next/font`). Tokens are in `tailwind.config.ts`; buttons, inputs, chips and cards are classes in `src/app/globals.css` (`.btn-primary`, `.input`, `.chip`, `.card`, …). Icons are inline SVGs in `src/components/shared/icons.tsx`; no emoji.
 
-# Start production server
-npm start
-```
-
-## Project Structure
-
-```
-src/
-├── app/                    # Next.js App Router pages
-│   ├── e/[slug]/          # Guest room routes
-│   ├── wall/[slug]/       # Live wall
-│   ├── host/              # Host dashboard
-│   ├── admin/             # Admin dashboard
-│   └── login/             # Auth
-├── components/            # React components
-│   ├── upload/           # Camera upload components
-│   └── shared/           # Shared components
-├── hooks/                # Custom React hooks
-├── lib/
-│   ├── api/              # API client and types
-│   ├── storage/          # IndexedDB upload queue
-│   └── utils/            # Utility functions
-└── styles/               # Global styles
-```
-
-## Key Routes
-
-| Route | Description |
-|-------|-------------|
-| `/` | Home page |
-| `/e/[slug]` | Join event room |
-| `/e/[slug]/upload` | Photo upload (camera) |
-| `/e/[slug]/gallery` | Event photo gallery |
-| `/e/[slug]/me` | User's photos and photos they're in |
-| `/wall/[slug]` | Live wall for projector display |
-| `/login` | Host/Admin login (OTP) |
-| `/host` | Host dashboard |
-| `/host/events/new` | Create new event |
-| `/host/events/[id]` | Event management |
-| `/admin` | Admin dashboard |
-
-## Development Notes
-
-- **Guest auth**: Uses anonymous session tokens stored in localStorage (`pixy_guest_[slug]`)
-- **Host auth**: Email OTP via backend, tokens stored in localStorage
-- **Direct uploads**: Photos upload directly to R2 via presigned URLs (server never sees file bytes)
-- **Real-time**: Live wall uses Server-Sent Events (SSE)
-- **Offline support**: Upload queue works offline, retries when connection restored
-- **Mobile-first**: Optimized for mobile devices (primary use case)
-
-## Related
-
-- [Backend Repository](../pixy-backend) - NestJS API
-- [Product Spec](../pixy-backend/docs/Pixy.ng%20Product%20Spec.md) - Full product specification
+`@next/next/no-img-element` is off: photos are short-lived signed R2 URLs, which Next’s image optimizer can’t cache usefully.

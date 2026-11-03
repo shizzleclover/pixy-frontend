@@ -1,184 +1,171 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api/client';
-import { useAuth } from '@/hooks/use-auth';
-import DashboardHeader from '@/components/shared/dashboard-header';
+import { errorMessage } from '@/lib/api/errors';
+import type { HostEvent } from '@/lib/api/types';
+import { formatBytes, formatDate, formatTime, STATUS_LABEL } from '@/lib/format';
+import AppShell from '@/components/shared/app-shell';
+import { CheckIcon, CopyIcon, ExternalIcon } from '@/components/shared/icons';
 
-function ActionCard({
-  icon,
-  title,
-  body,
-  children,
-}: {
-  icon: string;
-  title: string;
-  body: string;
-  children?: React.ReactNode;
-}) {
+function NextStep({ event }: { event: HostEvent }) {
+  if (event.status === 'draft')
+    return (
+      <div className="card p-6">
+        <p className="text-lg font-semibold">Your room opens once a package is paid</p>
+        <p className="mt-1 text-sm text-ink-soft">
+          Online checkout is coming soon. Until then, contact the Pixy team to open this room.
+        </p>
+      </div>
+    );
+  if (event.status === 'active')
+    return (
+      <div className="card flex items-start gap-3 p-6">
+        <span className="live-dot mt-2" />
+        <div>
+          <p className="text-lg font-semibold">Your room is open</p>
+          <p className="mt-1 text-sm text-ink-soft">
+            Guests can share photos from {formatTime(event.startsAt)} on {formatDate(event.startsAt, { day: 'numeric', month: 'long' })} until{' '}
+            {formatTime(event.endsAt)} on {formatDate(event.endsAt, { day: 'numeric', month: 'long' })}.
+          </p>
+        </div>
+      </div>
+    );
+  return null;
+}
+
+function Stat({ label, value }: { label: string; value: string | number | undefined }) {
   return (
-    <div className="card card-hover">
-      <span className="icon-tile">{icon}</span>
-      <h3 className="mt-4 font-display text-lg font-semibold text-white">{title}</h3>
-      <p className="mt-1.5 text-sm leading-relaxed text-slate-400">{body}</p>
-      {children && <div className="mt-5 flex flex-wrap gap-2">{children}</div>}
+    <div className="p-5">
+      <p className="text-[13px] text-muted">{label}</p>
+      <p className="mt-1.5 text-3xl font-semibold">{value ?? '–'}</p>
     </div>
   );
 }
 
-function formatBytes(bytes: number): string {
-  if (!bytes) return '0 B';
-  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
-  const value = bytes / 1024 ** i;
-  return `${i === 0 || value >= 100 ? Math.round(value) : value.toFixed(1)} ${units[i]}`;
-}
-
-export default function EventDetail() {
-  const { id } = useParams<{ id: string }>();
-  const { token, loading, signOut } = useAuth();
+function SharePanel({ event }: { event: HostEvent }) {
   const [copied, setCopied] = useState(false);
+  const [joinUrl, setJoinUrl] = useState('');
+  useEffect(() => setJoinUrl(`${window.location.origin}/e/${event.slug}`), [event.slug]);
 
-  const { data: event, isLoading } = useQuery({
-    queryKey: ['event-detail', id],
-    queryFn: () => api.getEventDetail(id),
-    enabled: !!token,
-    retry: false,
+  const { data: qr } = useQuery({
+    queryKey: ['event-qr', event.id],
+    queryFn: () => api.getEventQr(event.id, 'svg'),
+    staleTime: Infinity,
   });
+  const [qrUrl, setQrUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!qr) return;
+    const url = URL.createObjectURL(qr);
+    setQrUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [qr]);
 
-  const { data: stats } = useQuery({
-    queryKey: ['event-stats', id],
-    queryFn: () => api.getEventStats(id),
-    enabled: !!token,
-    retry: false,
-  });
+  const downloadPng = async () => {
+    const blob = await api.getEventQr(event.id, 'png');
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${event.slug}-qr.png`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
-  if (loading || !token || isLoading) {
-    return (
-      <main className="mx-auto max-w-6xl px-4 py-10">
-        <div className="skeleton h-40 w-full" />
-      </main>
-    );
-  }
-
-  const slug = event?.slug ?? '';
-  const name = event?.name ?? 'Event';
-
-  const copyJoinLink = async () => {
+  const copy = async () => {
     try {
-      await navigator.clipboard.writeText(`${window.location.origin}/e/${slug}`);
+      await navigator.clipboard.writeText(joinUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2200);
     } catch {
-      setCopied(false);
+      /* clipboard blocked; the link is visible to copy by hand */
     }
   };
 
-  const uploads = stats?.uploads?.total;
-  const storageBytes = stats?.storageBytes;
+  return (
+    <aside className="card space-y-5 self-start p-6">
+      <h2 className="text-lg font-semibold">Share with guests</h2>
+      <div className="flex aspect-square items-center justify-center rounded-xl border border-rule bg-paper p-4">
+        {qrUrl ? <img src={qrUrl} alt="QR code that opens your event room" className="h-full w-full" /> : <div className="skeleton h-full w-full rounded" />}
+      </div>
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="text-[13px] text-muted">Join code</span>
+        <span className="text-2xl font-semibold tracking-[0.2em]">{event.joinCode}</span>
+      </div>
+      <p className="break-all text-sm text-ink-soft">{joinUrl}</p>
+      <div className="grid grid-cols-2 gap-2">
+        <button onClick={copy} className="btn btn-secondary btn-sm">
+          {copied ? <CheckIcon className="h-4 w-4" /> : <CopyIcon className="h-4 w-4" />}
+          {copied ? 'Copied' : 'Copy link'}
+        </button>
+        <button onClick={downloadPng} className="btn btn-secondary btn-sm">
+          QR image
+        </button>
+      </div>
+      <div className="flex flex-col gap-2 border-t border-rule pt-4 text-sm">
+        <Link href={`/e/${event.slug}`} target="_blank" className="link inline-flex items-center gap-1.5">
+          Open the guest room <ExternalIcon className="h-4 w-4" />
+        </Link>
+        {event.wallEnabled && (
+          <Link href={`/wall/${event.slug}`} target="_blank" className="link inline-flex items-center gap-1.5">
+            Open the live wall <ExternalIcon className="h-4 w-4" />
+          </Link>
+        )}
+      </div>
+    </aside>
+  );
+}
+
+function EventDetail({ id }: { id: string }) {
+  const { data: event, isLoading, error } = useQuery({ queryKey: ['event', id], queryFn: () => api.getEvent(id) });
+  const { data: stats } = useQuery({ queryKey: ['event-stats', id], queryFn: () => api.getEventStats(id), enabled: !!event });
+
+  if (isLoading) return <div className="skeleton h-40 rounded-card" aria-busy="true" />;
+  if (error || !event)
+    return (
+      <p role="alert" className="notice notice-error">
+        {errorMessage(error, 'We couldn’t load this event.')}
+      </p>
+    );
 
   return (
-    <main className="min-h-screen pb-20">
-      <DashboardHeader
-        title={name}
-        subtitle={slug ? `/e/${slug}` : 'Event dashboard'}
-        onSignOut={signOut}
-        actions={
-          <Link href="/host" className="btn btn-ghost btn-sm">
-            ← All events
+    <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="space-y-8">
+        <div>
+          <Link href="/host" className="text-sm text-muted hover:text-ink">
+            ← Your events
           </Link>
-        }
-      />
-
-      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-        {/* Hero */}
-        <div className="panel mb-8 overflow-hidden">
-          <div className="relative h-36 bg-brand-gradient-soft sm:h-44">
-            <div className="absolute inset-0 bg-gradient-to-t from-ink-900 via-ink-900/40 to-transparent" />
-            <div className="absolute inset-x-6 bottom-5 flex flex-wrap items-end justify-between gap-4">
-              <div>
-                <h1 className="font-display text-2xl font-bold text-white sm:text-3xl">{name}</h1>
-                <p className="mt-1 text-sm text-slate-400">
-                  {event?.venue ? `${event.venue} · ` : ''}
-                  {event?.joinCode ? `Join code ${event.joinCode}` : 'Share the QR with your guests'}
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <Link href={`/e/${slug}`} className="btn btn-secondary btn-sm">
-                  Guest room
-                </Link>
-                <Link href={`/wall/${slug}`} className="btn btn-primary btn-sm">
-                  Live wall
-                </Link>
-              </div>
-            </div>
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <h1 className="font-serif text-[44px] leading-none sm:text-[52px]">{event.name}</h1>
+            <span className="chip">
+              {event.status === 'active' && <span className="live-dot" />}
+              {STATUS_LABEL[event.status]}
+            </span>
           </div>
-
-          <div className="flex flex-wrap items-center gap-3 border-t border-white/[0.07] p-5">
-            <span className="badge badge-brand">{event?.status ?? 'draft'}</span>
-            <code className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-1.5 font-mono text-xs text-slate-300">
-              /e/{slug}
-            </code>
-            <button onClick={copyJoinLink} className="btn btn-secondary btn-sm">
-              {copied ? '✓ Copied' : 'Copy join link'}
-            </button>
-          </div>
+          <p className="mt-3 text-[15px] text-muted">
+            {formatDate(event.date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+            {event.venue ? ` · ${event.venue}` : ''}
+          </p>
         </div>
 
-        {/* Stats */}
-        <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="stat-card">
-            <p className="text-xs uppercase tracking-wider text-slate-500">Uploads</p>
-            <p className="mt-2 font-display text-3xl font-bold text-white">{uploads ?? '—'}</p>
-          </div>
-          <div className="stat-card">
-            <p className="text-xs uppercase tracking-wider text-slate-500">Guests</p>
-            <p className="mt-2 font-display text-3xl font-bold text-white">{stats?.guests ?? '—'}</p>
-          </div>
-          <div className="stat-card">
-            <p className="text-xs uppercase tracking-wider text-slate-500">Storage used</p>
-            <p className="mt-2 font-display text-3xl font-bold text-white">
-              {storageBytes === undefined ? '—' : formatBytes(storageBytes)}
-            </p>
-          </div>
-          <div className="stat-card">
-            <p className="text-xs uppercase tracking-wider text-slate-500">On the wall</p>
-            <p className="mt-2 font-display text-3xl font-bold text-white">{stats?.onWall ?? '—'}</p>
-          </div>
-        </div>
+        <NextStep event={event} />
 
-        {/* Actions */}
-        <div className="grid gap-5 md:grid-cols-3">
-          <ActionCard
-            icon="🔳"
-            title="QR code & signage"
-            body="Download a table card, A3 poster and screen slide, all pointing at your event room."
-          >
-            <button className="btn btn-secondary btn-sm">Download signage</button>
-          </ActionCard>
-
-          <ActionCard
-            icon="🖼️"
-            title="Media"
-            body="Review everything guests uploaded, hide what shouldn’t be on the wall and export the lot."
-          >
-            <button className="btn btn-secondary btn-sm">View all photos</button>
-            <button className="btn btn-secondary btn-sm">Download ZIP</button>
-          </ActionCard>
-
-          <ActionCard
-            icon="📖"
-            title="Magazine"
-            body="Auto-select the best shots, preview the layout, swap pages and approve for printing."
-          >
-            <button className="btn btn-primary btn-sm">Build magazine</button>
-            <button className="btn btn-secondary btn-sm">Preview & approve</button>
-          </ActionCard>
+        <div className="card grid grid-cols-2 divide-rule sm:grid-cols-4 sm:divide-x [&>*:nth-child(-n+2)]:border-b [&>*:nth-child(-n+2)]:border-rule sm:[&>*:nth-child(-n+2)]:border-b-0">
+          <Stat label="Photos" value={stats?.uploads.total} />
+          <Stat label="Guests" value={stats?.guests} />
+          <Stat label="On the wall" value={stats?.onWall} />
+          <Stat label="Storage" value={stats ? formatBytes(stats.storageBytes) : undefined} />
         </div>
       </div>
-    </main>
+
+      <SharePanel event={event} />
+    </div>
   );
+}
+
+export default function EventPage() {
+  const { id } = useParams<{ id: string }>();
+  return <AppShell>{() => <EventDetail id={id} />}</AppShell>;
 }

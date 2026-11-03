@@ -1,77 +1,50 @@
 'use client';
 
-import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useQuery } from '@tanstack/react-query';
-import { useGuest } from '@/hooks/use-guest';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api/client';
-import { RoomHeader, RoomNav } from '@/components/guest/room-chrome';
-import PhotoGrid from '@/components/guest/photo-grid';
+import { errorMessage } from '@/lib/api/errors';
+import { useGuest } from '@/hooks/use-guest';
+import GuestPage from '@/components/guest/guest-page';
+import PhotoGrid, { GridSkeleton } from '@/components/guest/photo-grid';
 import EmptyState from '@/components/shared/empty-state';
 
 export default function GalleryPage() {
   const { slug } = useParams<{ slug: string }>();
-  const { token, loading: guestLoading, isJoined } = useGuest(slug);
+  const { isJoined } = useGuest(slug);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
     queryKey: ['gallery', slug],
-    queryFn: () => api.getGallery(slug, token!),
-    enabled: !!token,
+    queryFn: ({ pageParam }) => api.getGallery(slug, pageParam),
+    initialPageParam: null as string | null,
+    getNextPageParam: (last) => last.nextCursor,
+    enabled: isJoined,
   });
 
-  const items = data?.items ?? [];
+  const items = (data?.pages ?? []).flatMap((p) =>
+    p.items.map((m) => ({ ...m, caption: m.guest?.displayName ?? undefined })),
+  );
 
   return (
-    <main className="min-h-screen pb-32">
-      <RoomHeader slug={slug} />
-
-      <div className="mx-auto max-w-3xl px-4 py-6">
-        <div className="mb-5 flex items-end justify-between gap-4">
-          <div>
-            <h1 className="font-display text-2xl font-bold text-white">Event gallery</h1>
-            <p className="mt-1 text-sm text-slate-400">
-              {items.length > 0 ? `${items.length} moment${items.length === 1 ? '' : 's'} so far` : 'Fresh from the room'}
-            </p>
-          </div>
-          <Link href={`/e/${slug}/upload`} className="btn btn-primary btn-sm flex-none">
-            Add yours
-          </Link>
-        </div>
-
-        {guestLoading || (isJoined && isLoading) ? (
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="skeleton aspect-square" />
-            ))}
-          </div>
-        ) : !isJoined ? (
-          <EmptyState
-            icon="🔓"
-            title="Join the room to see the gallery"
-            body="Add your name and a selfie, then every photo from the event unlocks."
-            action={
-              <Link href={`/e/${slug}`} className="btn btn-primary">
-                Join the room
-              </Link>
-            }
-          />
-        ) : items.length === 0 ? (
-          <EmptyState
-            icon="📷"
-            title="No photos yet — be the first"
-            body="Yours will appear here the moment they upload, alongside everyone else’s."
-            action={
-              <Link href={`/e/${slug}/upload`} className="btn btn-primary">
-                Open the camera
-              </Link>
-            }
-          />
-        ) : (
+    <GuestPage slug={slug}>
+      {isLoading ? (
+        <GridSkeleton />
+      ) : error ? (
+        <EmptyState title="Couldn’t load photos" body={errorMessage(error)} />
+      ) : items.length === 0 ? (
+        <EmptyState title="No photos yet" body="Be the first. Tap the camera and your shot appears here for everyone." />
+      ) : (
+        <>
           <PhotoGrid items={items} />
-        )}
-      </div>
-
-      <RoomNav slug={slug} />
-    </main>
+          {hasNextPage && (
+            <div className="flex justify-center py-6">
+              <button onClick={() => fetchNextPage()} disabled={isFetchingNextPage} className="btn btn-secondary btn-sm">
+                {isFetchingNextPage ? 'Loading…' : 'Load more'}
+              </button>
+            </div>
+          )}
+        </>
+      )}
+    </GuestPage>
   );
 }
