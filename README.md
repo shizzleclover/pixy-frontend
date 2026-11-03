@@ -21,6 +21,24 @@ npm run dev                  # http://localhost:3000
 | `npm run lint` | ESLint, no warnings allowed |
 | `npm run typecheck` | `tsc --noEmit` |
 
+## Deploying (Vercel)
+
+1. Vercel → **Add New → Project** → import this repo. The framework preset is
+   detected as Next.js; no build settings to change.
+2. **Settings → Environment Variables**: `NEXT_PUBLIC_API_URL` = the API’s
+   URL, e.g. `https://pixy-api.onrender.com` (no trailing slash). It’s baked
+   in at build time, so redeploy after changing it.
+3. Deploy, then tell the backend about this URL: set its `APP_URL` to the
+   Vercel URL (CORS and email links), and add the URL to the R2 bucket’s CORS
+   rule (browsers upload photos straight to R2). See the backend’s DEPLOY.md.
+
+Preview deployments get their own URLs, which the API won’t accept unless
+they’re added to its `CORS_ORIGINS`; test on the production URL.
+
+The home page reads packages from `GET /catalog` and refreshes hourly. If the
+API was asleep or down during a build, the packages section is hidden until
+the next refresh.
+
 ## Routes
 
 | Route | |
