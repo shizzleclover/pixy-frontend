@@ -17,6 +17,8 @@ export default function CameraPage() {
   const input = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Bumped on every capture: re-keys the shutter flash so it plays again.
+  const [shots, setShots] = useState(0);
 
   useEffect(() => {
     if (!loading && !isJoined) router.replace(`/e/${slug}`);
@@ -31,6 +33,7 @@ export default function CameraPage() {
     e.target.value = '';
     if (!files.length || !uploads) return;
     setError(null);
+    setShots((n) => n + 1);
     setPreview(URL.createObjectURL(files[files.length - 1]));
     try {
       await uploads.add(files);
@@ -63,13 +66,16 @@ export default function CameraPage() {
 
       <div className="relative m-4 flex flex-1 items-center justify-center overflow-hidden rounded-card bg-placeholder">
         {preview ? (
-          <img src={preview} alt="Your last photo" className="h-full w-full object-cover" />
+          // Develops in like an instant photo.
+          <img key={preview} src={preview} alt="Your last photo" className="h-full w-full animate-develop object-cover" />
         ) : (
           <p className="max-w-[16rem] text-center text-[15px] text-ink-soft">
             {closed ? 'Uploads are closed for this event.' : 'Tap the button to take a photo. It goes straight to the event.'}
           </p>
         )}
       </div>
+
+      {shots > 0 && <div key={shots} aria-hidden="true" className="pointer-events-none fixed inset-0 z-50 animate-flash bg-white" />}
 
       <p role="status" aria-live="polite" className="min-h-6 px-6 text-center text-sm text-ink-soft">
         {status}
@@ -85,8 +91,9 @@ export default function CameraPage() {
             onClick={() => input.current?.click()}
             disabled={!uploads || !!closed}
             aria-label="Take a photo"
-            className="flex h-[76px] w-[76px] items-center justify-center rounded-full border-4 border-card bg-accent text-white shadow-[0_0_0_1px_#D6CEC2] transition-colors hover:bg-accent-hover disabled:bg-rule disabled:text-muted"
+            className="relative flex h-[76px] w-[76px] items-center justify-center rounded-full border-4 border-card bg-accent text-white shadow-[0_0_0_1px_#D6CEC2] transition-transform hover:bg-accent-hover active:scale-90 disabled:bg-rule disabled:text-muted"
           >
+            {!closed && uploads && <span aria-hidden="true" className="absolute inset-0 animate-ping2 rounded-full border-2 border-accent" />}
             <CameraIcon className="h-8 w-8" />
           </button>
         </div>

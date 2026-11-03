@@ -39,7 +39,7 @@ export default function PhotosOfMePage() {
       {isLoading ? (
         <GridSkeleton />
       ) : error ? (
-        <EmptyState title="Couldn’t load your photos" body={errorMessage(error)} />
+        <EmptyState title="Couldn’t load your photos" body={errorMessage(error)} art={false} />
       ) : items.length === 0 ? (
         <EmptyState
           title="No photos of you yet"

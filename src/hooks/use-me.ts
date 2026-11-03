@@ -17,5 +17,7 @@ export function useMe(slug: string, list: 'photosOfMe' | 'uploads') {
     initialPageParam: null as string | null,
     getNextPageParam: (last) => (list === 'uploads' ? last.uploadsNextCursor : last.photosOfMeNextCursor),
     enabled: isJoined,
+    // Face matches and processing finish in the background.
+    refetchInterval: 30_000,
   });
 }

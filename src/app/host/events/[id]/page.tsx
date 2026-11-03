@@ -7,7 +7,9 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api/client';
 import { errorMessage } from '@/lib/api/errors';
 import type { HostEvent } from '@/lib/api/types';
+import Image from 'next/image';
 import { formatBytes, formatDate, formatTime, STATUS_LABEL } from '@/lib/format';
+import { coverFor } from '@/lib/photos';
 import AppShell from '@/components/shared/app-shell';
 import { CheckIcon, CopyIcon, ExternalIcon } from '@/components/shared/icons';
 
@@ -133,21 +135,32 @@ function EventDetail({ id }: { id: string }) {
   return (
     <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_360px]">
       <div className="space-y-8">
-        <div>
-          <Link href="/host" className="text-sm text-muted hover:text-ink">
-            ← Your events
-          </Link>
-          <div className="mt-3 flex flex-wrap items-center gap-3">
-            <h1 className="font-serif text-[44px] leading-none sm:text-[52px]">{event.name}</h1>
-            <span className="chip">
-              {event.status === 'active' && <span className="live-dot" />}
-              {STATUS_LABEL[event.status]}
-            </span>
+        <Link href="/host" className="text-sm text-muted hover:text-ink">
+          ← Your events
+        </Link>
+        <div className="relative -mt-4 h-56 animate-rise overflow-hidden rounded-card bg-ink sm:h-64">
+          <Image
+            src={coverFor[event.type].src}
+            alt=""
+            fill
+            sizes="(min-width: 1024px) 720px, 100vw"
+            placeholder="blur"
+            priority
+            className="animate-kenburns object-cover opacity-80"
+          />
+          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink/85 to-transparent p-6 pt-16 text-paper">
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="font-serif text-[40px] leading-none sm:text-[52px]">{event.name}</h1>
+              <span className="chip border-transparent bg-paper text-ink">
+                {event.status === 'active' && <span className="live-dot" />}
+                {STATUS_LABEL[event.status]}
+              </span>
+            </div>
+            <p className="mt-2 text-[15px] text-paper/85">
+              {formatDate(event.date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+              {event.venue ? ` · ${event.venue}` : ''}
+            </p>
           </div>
-          <p className="mt-3 text-[15px] text-muted">
-            {formatDate(event.date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-            {event.venue ? ` · ${event.venue}` : ''}
-          </p>
         </div>
 
         <NextStep event={event} />

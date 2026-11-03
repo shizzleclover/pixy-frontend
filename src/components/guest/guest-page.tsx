@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useGuest } from '@/hooks/use-guest';
 import { RoomHeader, Shutter } from './room-chrome';
 import { useRoomUploads } from './upload-queue-provider';
+import Welcome from './welcome';
 
 /** Room pages that need a guest session; without one, back to the join screen. */
 export default function GuestPage({
@@ -27,6 +28,7 @@ export default function GuestPage({
   return (
     <main className="min-h-dvh pb-32">
       <RoomHeader slug={slug} />
+      {isJoined && <Welcome />}
       <div className="mx-auto max-w-3xl">{isJoined ? children : null}</div>
       {uploads && uploads.waiting > 0 && (
         <p

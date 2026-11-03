@@ -92,6 +92,55 @@
   }
 }
 
+@layer components {
+  /* A photo printed with a white border, lying slightly askew. */
+  .print {
+    @apply relative overflow-hidden bg-card p-2 pb-8 shadow-print transition-transform duration-500;
+    transform: rotate(var(--tilt, 0deg));
+  }
+  .print-hover:hover {
+    transform: rotate(0deg) translateY(-6px) scale(1.02);
+    @apply shadow-lift;
+  }
+  .print-caption {
+    @apply absolute inset-x-2 bottom-1.5 truncate font-serif text-[15px] leading-6 text-ink-soft;
+  }
+
+  /* Revealed by <Reveal> when scrolled into view. */
+  .reveal {
+    opacity: 0;
+    transform: translateY(24px);
+    transition:
+      opacity 0.8s cubic-bezier(0.2, 0.8, 0.2, 1),
+      transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+    transition-delay: var(--delay, 0ms);
+  }
+  .reveal.is-visible {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* Image that zooms slightly on hover of its .group parent. */
+  .zoom-img {
+    @apply transition-transform duration-700 ease-out group-hover:scale-105;
+  }
+}
+
+/* Anyone who asked their phone for less motion gets none. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .reveal {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 @layer utilities {
   .safe-bottom {
     padding-bottom: max(1rem, env(safe-area-inset-bottom));

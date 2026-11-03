@@ -24,7 +24,7 @@ export default function MyUploadsPage() {
       {isLoading ? (
         <GridSkeleton />
       ) : error ? (
-        <EmptyState title="Couldn’t load your uploads" body={errorMessage(error)} />
+        <EmptyState title="Couldn’t load your uploads" body={errorMessage(error)} art={false} />
       ) : uploads.length === 0 ? (
         <EmptyState title="Nothing shared yet" body="Tap the camera to share your first photo." />
       ) : (

@@ -4,7 +4,10 @@ import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api/client';
 import { errorMessage } from '@/lib/api/errors';
+import Image from 'next/image';
+import { photos } from '@/lib/photos';
 import SiteHeader from '@/components/shared/site-header';
+import Print from '@/components/visual/print';
 
 /** Only same-site paths, so ?next= can't send people elsewhere. */
 function safeNext(next: string | null): string | null {
@@ -48,7 +51,7 @@ function LoginForm() {
   };
 
   return (
-    <div className="mx-auto max-w-sm px-6 py-16">
+    <div className="w-full max-w-sm animate-rise">
       <h1 className="font-serif text-[44px] leading-none">{step === 'email' ? 'Sign in' : 'Check your email'}</h1>
       <p className="mt-3 text-[15px] text-ink-soft">
         {step === 'email' ? 'For hosts. We’ll email you a 6-digit code; no password.' : `We sent a 6-digit code to ${email}.`}
@@ -126,11 +129,21 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <main className="min-h-dvh">
+    <main className="flex min-h-dvh flex-col">
       <SiteHeader />
-      <Suspense>
-        <LoginForm />
-      </Suspense>
+      <div className="grid flex-1 lg:grid-cols-2">
+        <div className="flex items-start justify-center px-6 py-14 lg:items-center">
+          <Suspense>
+            <LoginForm />
+          </Suspense>
+        </div>
+        <div className="relative hidden overflow-hidden bg-ink lg:block" aria-hidden="true">
+          <Image src={photos.coupleEmbrace} alt="" fill sizes="50vw" placeholder="blur" className="animate-kenburns object-cover opacity-80" />
+          <div className="absolute bottom-10 left-10 w-56 animate-drop [--tilt:0deg] [animation-delay:400ms]">
+            <Print src={photos.coupleSmile} alt="" tilt={-5} caption="Saved for good" sizes="224px" hover={false} />
+          </div>
+        </div>
+      </div>
     </main>
   );
 }

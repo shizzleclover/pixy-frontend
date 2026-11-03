@@ -4,7 +4,9 @@ import Link from 'next/link';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api/client';
 import { errorMessage } from '@/lib/api/errors';
+import Image from 'next/image';
 import { formatDate, STATUS_LABEL } from '@/lib/format';
+import { coverFor } from '@/lib/photos';
 import AppShell from '@/components/shared/app-shell';
 import EmptyState from '@/components/shared/empty-state';
 import { ArrowRightIcon } from '@/components/shared/icons';
@@ -49,13 +51,18 @@ function EventList() {
         />
       ) : (
         <ul>
-          {events.map((ev) => (
-            <li key={ev.id}>
+          {events.map((ev, i) => (
+            <li key={ev.id} className="animate-rise" style={{ animationDelay: `${Math.min(i, 8) * 60}ms` }}>
               <Link
                 href={`/host/events/${ev.id}`}
-                className="flex items-center justify-between gap-4 border-b border-rule py-5 hover:bg-card"
+                className="group flex items-center justify-between gap-4 border-b border-rule py-4 transition-colors hover:bg-card"
               >
-                <span className="min-w-0">
+                <span className="relative h-16 w-14 flex-none rotate-[-3deg] bg-card p-1 pb-3 shadow-print transition-transform duration-300 group-hover:rotate-0">
+                  <span className="relative block h-full w-full overflow-hidden bg-placeholder">
+                    <Image src={coverFor[ev.type].src} alt="" fill sizes="56px" className="object-cover" />
+                  </span>
+                </span>
+                <span className="min-w-0 flex-1">
                   <span className="block truncate text-lg font-semibold">{ev.name}</span>
                   <span className="block text-sm text-muted">
                     {formatDate(ev.date)}

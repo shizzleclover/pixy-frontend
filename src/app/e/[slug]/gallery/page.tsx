@@ -19,6 +19,8 @@ export default function GalleryPage() {
     initialPageParam: null as string | null,
     getNextPageParam: (last) => last.nextCursor,
     enabled: isJoined,
+    // New photos keep arriving during the event; new tiles pop in.
+    refetchInterval: 20_000,
   });
 
   const items = (data?.pages ?? []).flatMap((p) =>
@@ -30,7 +32,7 @@ export default function GalleryPage() {
       {isLoading ? (
         <GridSkeleton />
       ) : error ? (
-        <EmptyState title="Couldn’t load photos" body={errorMessage(error)} />
+        <EmptyState title="Couldn’t load photos" body={errorMessage(error)} art={false} />
       ) : items.length === 0 ? (
         <EmptyState title="No photos yet" body="Be the first. Tap the camera and your shot appears here for everyone." />
       ) : (

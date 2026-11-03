@@ -58,8 +58,9 @@ export function Shutter({ slug }: { slug: string }) {
       <Link
         href={`/e/${slug}/upload`}
         aria-label="Take a photo"
-        className="pointer-events-auto flex h-[76px] w-[76px] items-center justify-center rounded-full border-4 border-card bg-accent text-white shadow-[0_0_0_1px_#D6CEC2] transition-colors hover:bg-accent-hover"
+        className="pointer-events-auto relative flex h-[76px] w-[76px] items-center justify-center rounded-full border-4 border-card bg-accent text-white shadow-[0_0_0_1px_#D6CEC2] transition-transform hover:bg-accent-hover active:scale-90"
       >
+        <span aria-hidden="true" className="absolute inset-0 animate-ping2 rounded-full border-2 border-accent" />
         <CameraIcon className="h-8 w-8" />
       </Link>
     </div>

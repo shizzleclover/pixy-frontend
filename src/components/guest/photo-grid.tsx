@@ -40,9 +40,15 @@ export default function PhotoGrid({ items }: { items: GridItem[] }) {
             key={item.id}
             onClick={() => setIndex(i)}
             aria-label={item.caption ? `Open photo by ${item.caption}` : 'Open photo'}
-            className="relative aspect-square overflow-hidden bg-placeholder"
+            className="group relative aspect-square animate-pop overflow-hidden bg-placeholder"
+            style={{ animationDelay: `${Math.min(i % 30, 12) * 40}ms` }}
           >
-            <img src={item.thumbUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
+            <img
+              src={item.thumbUrl}
+              alt=""
+              loading="lazy"
+              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+            />
             {item.type === 'video' && (
               <span className="absolute bottom-1.5 left-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-ink/70 text-white">
                 <PlayIcon className="h-3.5 w-3.5" />
@@ -77,10 +83,11 @@ export default function PhotoGrid({ items }: { items: GridItem[] }) {
               />
             ) : (
               <img
+                key={active.id}
                 src={active.url}
                 alt=""
                 onClick={(e) => e.stopPropagation()}
-                className="max-h-full max-w-full object-contain"
+                className="max-h-full max-w-full animate-pop object-contain"
               />
             )}
             {items.length > 1 && (

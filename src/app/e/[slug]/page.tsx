@@ -7,6 +7,9 @@ import { toJpeg } from '@/lib/media/compress';
 import { errorMessage } from '@/lib/api/errors';
 import { useGuest, GUEST_JOINED_EVENT } from '@/hooks/use-guest';
 import { useRoom } from '@/hooks/use-room';
+import Image from 'next/image';
+import { coverFor } from '@/lib/photos';
+import { JUST_JOINED_KEY } from '@/components/guest/welcome';
 import { Wordmark } from '@/components/shared/logo';
 import { CameraIcon } from '@/components/shared/icons';
 import JoinCodeForm from '@/components/shared/join-code-form';
@@ -58,6 +61,11 @@ export default function JoinRoom() {
           /* selfie search on the "Photos of me" tab still works later */
         }
       }
+      try {
+        sessionStorage.setItem(JUST_JOINED_KEY, name.trim());
+      } catch {
+        /* the welcome is a nicety */
+      }
       window.dispatchEvent(new Event(GUEST_JOINED_EVENT));
       router.replace(`/e/${slug}/gallery`);
     } catch (err) {
@@ -87,14 +95,28 @@ export default function JoinRoom() {
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col bg-paper">
-      <div className="relative h-[34vh] min-h-[220px] flex-none bg-placeholder">
-        {room?.coverUrl && <img src={room.coverUrl} alt="" className="h-full w-full object-cover" />}
-        <span className="absolute bottom-3 right-4 rounded-full bg-paper px-3 py-1.5">
+      <div className="relative h-[38vh] min-h-[240px] flex-none overflow-hidden bg-placeholder">
+        {room?.coverUrl ? (
+          <img src={room.coverUrl} alt="" className="h-full w-full animate-kenburns object-cover" />
+        ) : (
+          room && (
+            <Image
+              src={coverFor[room.type].src}
+              alt=""
+              fill
+              sizes="(min-width: 448px) 448px, 100vw"
+              placeholder="blur"
+              priority
+              className="animate-kenburns object-cover"
+            />
+          )
+        )}
+        <span className="absolute left-4 top-4 rounded-full bg-paper px-3 py-1.5 shadow-print">
           <Wordmark className="text-[20px]" />
         </span>
       </div>
 
-      <div className="flex flex-1 flex-col gap-6 px-6 pb-8 pt-7">
+      <div className="relative -mt-6 flex flex-1 animate-rise flex-col gap-6 rounded-t-[22px] bg-paper px-6 pb-8 pt-7">
         <div>
           {isLoading ? (
             <>
