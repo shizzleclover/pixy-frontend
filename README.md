@@ -26,7 +26,7 @@ npm run dev                  # http://localhost:3000
 1. Vercel → **Add New → Project** → import this repo. The framework preset is
    detected as Next.js; no build settings to change.
 2. **Settings → Environment Variables**: `NEXT_PUBLIC_API_URL` = the API’s
-   URL, e.g. `https://pixy-api.onrender.com` (no trailing slash). It’s baked
+   URL, e.g. `https://pixy-api.fly.dev` (no trailing slash). It’s baked
    in at build time, so redeploy after changing it.
 3. Deploy, then tell the backend about this URL: set its `APP_URL` to the
    Vercel URL (CORS and email links), and add the URL to the R2 bucket’s CORS
